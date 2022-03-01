@@ -1,0 +1,50 @@
+name: 'Terraform Constroy Resources 2'
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform Constroy Resources 2"
+        required: false
+        default: "resources2"
+
+permissions:
+      id-token: write
+      contents: read
+      
+jobs:
+  pack_deploy:
+    name: Build and Constroy Resources 2
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: HashiCorp - Setup Terraform
+      uses: hashicorp/setup-terraform@v1.2.1
+
+    - name: 'Az CLI login'
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  
+    - name: 'IaC Apply'
+      env:
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_SECRET: ${{ secrets.AZURE_SECRET }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        COMMAND_IAC: terraform
+      run: |
+
+        export ARM_CLIENT_ID=$AZURE_CLIENT_ID
+        export ARM_CLIENT_SECRET=$AZURE_SECRET
+        export ARM_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID
+        export ARM_TENANT_ID=$AZURE_TENANT_ID
+        
+        cd k8s/resources/resources_2
+        $COMMAND_IAC init
+        $COMMAND_IAC validate
+        $COMMAND_IAC plan
+        $COMMAND_IAC apply -auto-approve

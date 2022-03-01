@@ -1,0 +1,62 @@
+name: 'Terraform Destroy All Resources'
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform Destroy All Resources"
+        required: false
+        default: "destroy"
+
+permissions:
+      id-token: write
+      contents: read
+
+jobs:
+  pack_deploy:
+    name: Build and Destroy DataLake
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: HashiCorp - Setup Terraform
+      uses: hashicorp/setup-terraform@v1.2.1
+
+    - name: 'Az CLI login'
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: 'IaC Apply'
+      env:
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_SECRET: ${{ secrets.AZURE_SECRET }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        COMMAND_IAC: terraform
+      run: |
+
+        export ARM_CLIENT_ID=$AZURE_CLIENT_ID
+        export ARM_CLIENT_SECRET=$AZURE_SECRET
+        export ARM_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID
+        export ARM_TENANT_ID=$AZURE_TENANT_ID
+        
+        cd k8s/resources/AKS
+        $COMMAND_IAC init
+        $COMMAND_IAC destroy -auto-approve
+        
+        cd ..
+
+        cd resources_1
+        $COMMAND_IAC init
+        $COMMAND_IAC destroy -auto-approve
+
+        cd ..
+
+        cd resources_2
+        $COMMAND_IAC init
+        $COMMAND_IAC destroy --target azurerm_data_factory_pipeline.CopySqlServerToBronzeBlobContainer -auto-approve
+        $COMMAND_IAC destroy -auto-approve
+
